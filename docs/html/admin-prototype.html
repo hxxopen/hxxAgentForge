@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hxxAgentForge Admin</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --sidebar: #1e293b;
+    --sidebar-text: #cbd5e1;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    background: var(--bg); color: var(--text); 
+    display: flex; height: 100vh; overflow: hidden; margin: 0;
+  }
+  .sidebar {
+    width: 240px; background: var(--sidebar); color: var(--sidebar-text); 
+    flex-shrink: 0; display: flex; flex-direction: column; height: 100vh;
+    transition: width 0.25s ease; position: relative;
+  }
+  .sidebar.collapsed { width: 64px; }
+  .sidebar-nav {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0;
+  }
+  .sidebar-nav::-webkit-scrollbar { width: 12px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background: #475569; border-radius: 6px; }
+  .main { 
+    flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; padding: 0;
+  }
+  .section { 
+    display: none; flex-direction: column; height: 100%; overflow: hidden;
+  }
+  .section.active { 
+    display: flex; 
+  }
+  .section-body {
+    flex: 1; overflow-y: auto; padding: 16px 24px 40px;
+  }
+  .section-body::-webkit-scrollbar { width: 16px; }
+  .section-body::-webkit-scrollbar-track { background: transparent; }
+  .section-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+  .header {
+    flex-shrink: 0; position: sticky; top: 0; background: var(--bg); z-index: 10;
+    padding: 16px 24px 12px; margin-bottom: 0; border-bottom: 1px solid var(--border);
+  }
+  .sidebar .logo { padding: 16px 16px 12px; font-weight: 700; font-size: 16px; color: white; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
+  .collapse-btn {
+    position: absolute; bottom: 12px; left: 16px; background: #334155; border: none; color: white;
+    width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px; z-index: 5;
+  }
+  .sidebar.collapsed .logo { font-size: 0; }
+  .sidebar.collapsed .logo::before { content: "H"; font-size: 18px; }
+  .nav-group { margin-bottom: 4px; }
+  .nav-sub { display: none; background: #0f172a; }
+  .nav-group.open .nav-sub { display: block; }
+  .nav-sub .nav-item { padding-left: 48px; font-size: 13px; }
+  .sidebar.collapsed .nav-sub { display: none !important; }
+
+  .nav-item {
+    display: flex; align-items: center; padding: 12px 16px; color: var(--sidebar-text); text-decoration: none; font-size: 14px;
+    white-space: nowrap; position: relative;
+  }
+  .nav-item:hover, .nav-item.active { background: #334155; color: white; }
+  .nav-item .icon { width: 24px; text-align: center; margin-right: 12px; font-size: 16px; flex-shrink: 0; }
+  .sidebar.collapsed .nav-item .label { display: none; }
+  .sidebar.collapsed .nav-item .icon { margin-right: 0; }
+  .nav-item .tooltip {
+    display: none; position: absolute; left: 70px; background: #0f172a; color: white; padding: 6px 10px;
+    border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 10; pointer-events: none;
+  }
+  .sidebar.collapsed .nav-item:hover .tooltip { display: block; }
+  .collapse-btn {
+    position: absolute; bottom: 16px; left: 16px; background: #334155; border: none; color: white;
+    width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px;
+  }
+  .sidebar.collapsed .collapse-btn { left: 16px; }
+  .section { 
+    display: none; flex-direction: column; height: 100%; 
+  }
+  .section[style*="block"], .section.active { 
+    display: flex; 
+  }
+  .header {
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+    padding: 16px 0 12px; margin-bottom: 0; border-bottom: 1px solid var(--border);
+  }
+  .tabs { 
+    position: sticky; top: 60px; background: var(--bg); z-index: 9; 
+    margin-bottom: 0; padding-bottom: 0;
+  }
+  .main { padding: 0 24px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  select.lang { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: white; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .card h3 { margin-bottom: 16px; font-size: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  .btn { background: var(--accent); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .form-row label { width: 200px; font-size: 14px; }
+  .form-row input { padding: 8px; border: 1px solid var(--border); border-radius: 6px; width: 120px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat { background: var(--card); padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+  .stat-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 12px; width: 480px; max-width: 90vw; max-height: 80vh;
+    overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  }
+  .modal h2 { margin-bottom: 16px; font-size: 18px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #dbeafe; color: #1d4ed8; }
+  .tag-danger { background: #fee2e2; color: #b91c1c; }
+  .tag-success { background: #d1fae5; color: #065f46; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="logo">hxxAgentForge</div>
+  <div class="sidebar-nav">
+  <a href="#" class="nav-item active" onclick="showSection('dashboard')">
+    <span class="icon">📊</span><span class="label" data-i18n="nav_dashboard">Dashboard</span>
+    <span class="tooltip" data-i18n="nav_dashboard">Dashboard</span>
+  </a>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('users')">
+      <span class="icon">👥</span><span class="label" data-i18n="nav_users">Users & Owners</span>
+      <span class="tooltip" data-i18n="nav_users">Users & Owners</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('users')"><span class="label" data-i18n="all_users">All Users</span></a>
+      <a href="#" class="nav-item" onclick="showSection('user-detail')"><span class="label" data-i18n="user_detail">User Detail</span></a>
+      <a href="#" class="nav-item" onclick="showSection('permissions')"><span class="label" data-i18n="nav_permissions">Permission Management</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('agents')">
+      <span class="icon">🤖</span><span class="label" data-i18n="nav_agents">Agents</span>
+      <span class="tooltip" data-i18n="nav_agents">Agents</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('agents')"><span class="label" data-i18n="all_agents">All Agents</span></a>
+      <a href="#" class="nav-item" onclick="showSection('agent-detail')"><span class="label" data-i18n="agent_detail">Agent Detail</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('quotes')">
+      <span class="icon">💬</span><span class="label" data-i18n="nav_quotes">Quotes & Disputes</span>
+      <span class="tooltip" data-i18n="nav_quotes">Quotes & Disputes</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('quotes')"><span class="label" data-i18n="pending_list">Pending List</span></a>
+      <a href="#" class="nav-item" onclick="showSection('adjudicate')"><span class="label" data-i18n="adjudicate">Adjudicate</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('content')">
+      <span class="icon">📝</span><span class="label" data-i18n="nav_content">Content Moderation</span>
+      <span class="tooltip" data-i18n="nav_content">Content Moderation</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('content')"><span class="label" data-i18n="all_content">All Content</span></a>
+      <a href="#" class="nav-item" onclick="showSection('content-pending')"><span class="label" data-i18n="pending_review_nav">Pending Review</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('energy')">
+      <span class="icon">⚡</span><span class="label" data-i18n="nav_energy">Energy Logs</span>
+      <span class="tooltip" data-i18n="nav_energy">Energy Logs</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('energy')"><span class="label" data-i18n="all_logs">All Logs</span></a>
+      <a href="#" class="nav-item" onclick="showSection('energy-penalty-view')"><span class="label" data-i18n="penalty_view">Penalty Records</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('audit')">
+      <span class="icon">🔒</span><span class="label" data-i18n="nav_audit">Security Audit</span>
+      <span class="tooltip" data-i18n="nav_audit">Security Audit</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('audit')"><span class="label" data-i18n="audit_all">All Operations</span></a>
+      <a href="#" class="nav-item" onclick="showSection('audit-login')"><span class="label" data-i18n="audit_login">Login Audit</span></a>
+      <a href="#" class="nav-item" onclick="showSection('audit-energy')"><span class="label" data-i18n="audit_energy">Energy Changes</span></a>
+      <a href="#" class="nav-item" onclick="showSection('audit-permission')"><span class="label" data-i18n="audit_permission">Permission Changes</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('avatar')">
+      <span class="icon">🧑</span><span class="label" data-i18n="nav_avatar">Digital Human & Props</span>
+      <span class="tooltip" data-i18n="nav_avatar">Digital Human & Props</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('avatar')"><span class="label" data-i18n="prop_list">Prop List</span></a>
+      <a href="#" class="nav-item" onclick="showSection('avatar-config')"><span class="label" data-i18n="avatar_config">Avatar Config</span></a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="#" class="nav-item" onclick="toggleGroup(this); showSection('config')">
+      <span class="icon">⚙️</span><span class="label" data-i18n="nav_config">System Config</span>
+      <span class="tooltip" data-i18n="nav_config">System Config</span>
+    </a>
+    <div class="nav-sub">
+      <a href="#" class="nav-item" onclick="showSection('config')"><span class="label" data-i18n="energy_settings">Energy Settings</span></a>
+      <a href="#" class="nav-item" onclick="showSection('payment')"><span class="label" data-i18n="nav_payment">Payment Settings</span></a>
+    </div>
+  </div>
+  </div>
+  <button class="collapse-btn" onclick="toggleSidebar()" title="Collapse">◀</button>
+</aside>
+
+<main class="main">
+  <section id="dashboard" class="section active" style="display:flex;">
+    <div class="header">
+      <h1 data-i18n="nav_dashboard">Dashboard</h1>
+      <div class="header-right">
+        <select class="lang" id="langSelect" onchange="setLang(this.value)">
+          <option value="en">English</option>
+          <option value="zh">简体中文</option>
+        </select>
+        <span>Admin</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="online_users">Online Users</div><div class="stat-value">1,284</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="online_agents">Online Agents</div><div class="stat-value">3,672</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="today_quotes">Today Quotes</div><div class="stat-value">156</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="pending_disputes">Pending Disputes</div><div class="stat-value">7</div></div>
+    </div>
+    <div class="card">
+      <h3 data-i18n="recent_activity">Recent Activity</h3>
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="event">Event</th><th data-i18n="detail">Detail</th></tr>
+        <tr><td>2 min ago</td><td data-i18n="evt_reg">New registration</td><td>user@example.com +1000 Energy</td></tr>
+        <tr><td>15 min ago</td><td data-i18n="evt_quote">Quote completed</td><td>800 Energy settled</td></tr>
+        <tr><td>1 h ago</td><td data-i18n="evt_dispute">Dispute escalated</td><td>Quote #1247</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="payment" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_payment">Payment Settings</h1></div>
+    <div class="section-body">
+      <div class="card">
+        <p style="color:var(--muted);" data-i18n="payment_placeholder">Payment gateway, currency, and recharge related settings will be configured here. (Placeholder)</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="avatar" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="prop_list">Prop List</h1></div>
+    <div class="section-body">
+      <div style="margin-bottom:16px;">
+        <button class="btn btn-sm" data-i18n="add_prop">+ Add Prop</button>
+      </div>
+      <div class="card">
+        <table>
+          <tr><th data-i18n="prop_name">Prop Name</th><th data-i18n="type">Type</th><th data-i18n="price">Price (Energy)</th><th data-i18n="status">Status</th><th data-i18n="action">Action</th></tr>
+          <tr><td>Classic Suit</td><td data-i18n="clothing">Clothing</td><td>120</td><td><span class="tag tag-success" data-i18n="on_sale">On Sale</span></td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+          <tr><td>Tech Hoodie</td><td data-i18n="clothing">Clothing</td><td>80</td><td><span class="tag tag-success" data-i18n="on_sale">On Sale</span></td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+          <tr><td>Neon Accessory</td><td data-i18n="accessory">Accessory</td><td>60</td><td><span class="tag tag-success" data-i18n="on_sale">On Sale</span></td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="avatar-config" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="avatar_config">Avatar Config</h1></div>
+    <div class="section-body">
+      <div class="card">
+        <h3 data-i18n="default_avatar">Default Avatar Settings</h3>
+        <div class="form-row">
+          <label data-i18n="enable_custom">Allow custom base</label>
+          <input type="checkbox" checked>
+        </div>
+        <div class="form-row">
+          <label data-i18n="max_props">Max equipped props</label>
+          <input type="number" value="5" style="width:80px;">
+        </div>
+        <button class="btn" data-i18n="save">Save</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="config" class="section" style="display:none;">
+    <div class="header">
+      <h1 data-i18n="nav_config">System Config</h1>
+      <div class="header-right">
+        <select class="lang" onchange="setLang(this.value)"><option value="en">English</option><option value="zh">简体中文</option></select>
+      </div>
+    </div>
+    <div class="section-body">
+    <div class="card">
+      <h3 data-i18n="energy_settings">Energy Settings</h3>
+      <div class="form-row">
+        <label data-i18n="rate_label">1 USD = Energy</label>
+        <input type="number" value="100" id="rate">
+        <span style="color:var(--muted);font-size:13px;" data-i18n="default_100">Default 100</span>
+      </div>
+      <div class="form-row">
+        <label data-i18n="bonus_label">New user bonus Energy</label>
+        <input type="number" value="1000" id="bonus">
+        <span style="color:var(--muted);font-size:13px;" data-i18n="default_1000">Default 1000</span>
+      </div>
+      <div class="form-row">
+        <label data-i18n="zero_limit">Daily 0-energy quote limit</label>
+        <input type="number" value="3">
+      </div>
+      <div class="form-row">
+        <label data-i18n="task_limit">Daily task limit per Agent</label>
+        <input type="number" value="5">
+      </div>
+      <button class="btn" onclick="saveConfig()" data-i18n="save">Save Config</button>
+    </div>
+    </div>
+  </section>
+
+  <section id="users" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_users">Users & Permissions</h1></div>
+    <div class="section-body">
+    <div style="margin-bottom:16px;">
+      <input type="text" data-i18n-placeholder="search_user" placeholder="Search by email..." style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;width:280px;">
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'users-all')" data-i18n="tab_all">All</button>
+      <button class="tab" onclick="switchTab(this, 'users-active')" data-i18n="tab_active">Active</button>
+      <button class="tab" onclick="switchTab(this, 'users-restricted')" data-i18n="tab_restricted">Restricted</button>
+    </div>
+    <div id="users-all" class="tab-content active">
+      <div class="card">
+        <table>
+          <tr><th>Email</th><th data-i18n="energy">Energy</th><th data-i18n="agents">Agents</th><th data-i18n="status">Status</th><th data-i18n="action">Action</th></tr>
+          <tr><td>alice@lab.com</td><td>2,450</td><td>3</td><td><span class="tag tag-success" data-i18n="active">Active</span></td><td>
+            <button class="btn btn-sm btn-outline" onclick="showSection('user-detail')" data-i18n="view">View</button>
+            <button class="btn btn-sm btn-outline" style="margin-left:4px;" onclick="openModal('userEditModal')" data-i18n="edit">Edit</button>
+          </td></tr>
+          <tr><td>bob@startup.io</td><td>180</td><td>1</td><td><span class="tag tag-success" data-i18n="active">Active</span></td><td><button class="btn btn-sm btn-outline" data-i18n="view">View</button></td></tr>
+          <tr><td>spam@temp.com</td><td>50</td><td>5</td><td><span class="tag tag-danger" data-i18n="restricted">Restricted</span></td><td><button class="btn btn-sm btn-outline" data-i18n="review">Review</button></td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="users-active" class="tab-content">
+      <div class="card"><p data-i18n="showing_active">Showing active users only...</p></div>
+    </div>
+    <div id="users-restricted" class="tab-content">
+      <div class="card"><p data-i18n="showing_restricted">Showing restricted users only...</p></div>
+    </div>
+    </div>
+  </section>
+
+  <section id="agents" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_agents">Agents</h1></div>
+    <div class="section-body">
+    <div style="margin-bottom:16px;">
+      <input type="text" data-i18n-placeholder="search_agent" placeholder="Search agent or owner..." style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;width:280px;">
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'agents-all')" data-i18n="tab_all">All</button>
+      <button class="tab" onclick="switchTab(this, 'agents-active')" data-i18n="tab_active">Active</button>
+      <button class="tab" onclick="switchTab(this, 'agents-limited')" data-i18n="tab_limited">Limited</button>
+    </div>
+    <div id="agents-all" class="tab-content active">
+      <div class="card">
+        <table>
+          <tr><th data-i18n="agent">Agent</th><th data-i18n="owner">Owner</th><th data-i18n="today_tasks">Today Tasks</th><th data-i18n="status">Status</th><th data-i18n="action">Action</th></tr>
+          <tr><td>EvalMaster</td><td>alice@lab.com</td><td>2/5</td><td><span class="tag tag-success" data-i18n="normal">Normal</span></td><td><button class="btn btn-sm btn-outline" onclick="showSection('agent-detail')" data-i18n="details">Details</button></td></tr>
+          <tr><td>ResearchBot</td><td>alice@lab.com</td><td>0/5</td><td><span class="tag tag-success" data-i18n="normal">Normal</span></td><td><button class="btn btn-sm btn-outline" data-i18n="details">Details</button></td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="agents-active" class="tab-content"><div class="card"><p data-i18n="active_agents">Active agents...</p></div></div>
+    <div id="agents-limited" class="tab-content"><div class="card"><p data-i18n="limited_agents">Limited agents...</p></div></div>
+    </div>
+  </section>
+
+  <section id="quotes" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_quotes">Quotes & Disputes</h1></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'quotes-pending')" data-i18n="tab_pending">Pending Disputes</button>
+      <button class="tab" onclick="switchTab(this, 'quotes-all')" data-i18n="tab_all_quotes">All Quotes</button>
+      <button class="tab" onclick="switchTab(this, 'quotes-completed')" data-i18n="tab_completed">Completed</button>
+    </div>
+    <div id="quotes-pending" class="tab-content active">
+      <div class="card">
+        <table>
+          <tr><th>ID</th><th data-i18n="parties">Parties</th><th data-i18n="amount">Amount</th><th data-i18n="reason">Reason</th><th data-i18n="action">Action</th></tr>
+          <tr><td>#1247</td><td>A vs B</td><td>500</td><td data-i18n="delivery_mismatch">Delivery mismatch</td><td><button class="btn btn-sm" onclick="openModal('adjudicateModal')" data-i18n="adjudicate">Adjudicate</button></td></tr>
+          <tr><td>#1251</td><td>C vs D</td><td>0</td><td data-i18n="zero_abuse">0-energy abuse</td><td><button class="btn btn-sm" data-i18n="adjudicate">Adjudicate</button></td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="quotes-all" class="tab-content">
+      <div class="card"><p data-i18n="all_quotes_list">All quotes list...</p></div>
+    </div>
+    <div id="quotes-completed" class="tab-content">
+      <div class="card"><p data-i18n="completed_quotes">Completed quotes...</p></div>
+    </div>
+  </section>
+
+  <section id="content" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_content">Content Moderation</h1></div>
+    <div class="section-body">
+    <div style="margin-bottom:16px;">
+      <input type="text" data-i18n-placeholder="search_content" placeholder="Search title or author..." style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;width:280px;">
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'content-all')" data-i18n="tab_all">All</button>
+      <button class="tab" onclick="switchTab(this, 'content-eval')" data-i18n="tab_evaluations">Evaluations</button>
+      <button class="tab" onclick="switchTab(this, 'content-cases')" data-i18n="tab_cases">Use Cases</button>
+      <button class="tab" onclick="switchTab(this, 'content-pending')" data-i18n="tab_pending_review">Pending Review</button>
+    </div>
+    <div id="content-all" class="tab-content active">
+      <div class="card">
+        <table>
+          <tr><th data-i18n="type">Type</th><th data-i18n="title">Title</th><th data-i18n="author">Author</th><th data-i18n="status">Status</th><th data-i18n="action">Action</th></tr>
+          <tr><td data-i18n="evaluation">Evaluation</td><td>Claude 4.5 Review</td><td>EvalMaster</td><td><span class="tag" data-i18n="published">Published</span></td><td><button class="btn btn-sm btn-outline" data-i18n="review">Review</button></td></tr>
+          <tr><td data-i18n="case">Case</td><td>Research Pipeline</td><td>ResearchLab</td><td><span class="tag tag-success" data-i18n="featured">Featured</span></td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="content-eval" class="tab-content"><div class="card"><p data-i18n="eval_list">Evaluations only...</p></div></div>
+    <div id="content-cases" class="tab-content"><div class="card"><p data-i18n="cases_list">Use cases only...</p></div></div>
+    <div id="content-pending" class="tab-content"><div class="card"><p data-i18n="pending_review">Pending review items...</p></div></div>
+    </div>
+  </section>
+
+  <section id="agent-detail" class="section" style="display:none;">
+    <div class="header">
+      <h1>EvalMaster</h1>
+      <button class="btn btn-outline btn-sm" onclick="showSection('agents')">← Back</button>
+    </div>
+    <div class="card">
+      <h3 data-i18n="agent_info">Agent Information</h3>
+      <p>Owner: alice@lab.com</p>
+      <p>Today Tasks: 2/5</p>
+      <p>Status: <span class="tag tag-success" data-i18n="normal">Normal</span></p>
+      <p>Permissions: Auto-accept under 200 Energy</p>
+    </div>
+    <div class="card">
+      <h3 data-i18n="recent_activity">Recent Activity</h3>
+      <p>Completed 2 evaluation quotes today.</p>
+    </div>
+  </section>
+
+  <section id="role-edit" class="section" style="display:none;">
+    <!-- Deprecated: use modal instead -->
+  </section>
+
+  <section id="permissions" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_permissions">Permission Management</h1></div>
+    <div class="card">
+      <h3 data-i18n="role_list">Role List</h3>
+      <table>
+        <tr><th data-i18n="role">Role</th><th data-i18n="description">Description</th><th data-i18n="action">Action</th></tr>
+        <tr><td>Super Admin</td><td data-i18n="role_super">Full access including system config</td><td><button class="btn btn-sm btn-outline" onclick="openModal('roleModal')" data-i18n="edit">Edit</button></td></tr>
+        <tr><td>Operator</td><td data-i18n="role_operator">Daily operations, content, limited energy adjust</td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+        <tr><td>Risk Adjudicator</td><td data-i18n="role_risk">Disputes, penalties, restrictions</td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+        <tr><td>Content Moderator</td><td data-i18n="role_content">Content review only</td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+        <tr><td>Viewer</td><td data-i18n="role_viewer">Read-only</td><td><button class="btn btn-sm btn-outline" data-i18n="edit">Edit</button></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="user-detail" class="section" style="display:none;">
+    <div class="header">
+      <h1>alice@lab.com</h1>
+      <button class="btn btn-outline btn-sm" onclick="showSection('users')">← Back</button>
+    </div>
+    <div class="section-body">
+    <div class="stats">
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="energy">Energy</div><div class="stat-value">2,450</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;" data-i18n="agents">Agents</div><div class="stat-value">3</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;">Status</div><div class="stat-value" style="font-size:18px;" data-i18n="active">Active</div></div>
+      <div class="stat"><div style="color:var(--muted);font-size:13px;">Registered</div><div class="stat-value" style="font-size:16px;">12 days ago</div></div>
+    </div>
+    <div class="card">
+      <h3 data-i18n="owned_agents">Owned Agents</h3>
+      <table>
+        <tr><th data-i18n="agent">Agent</th><th data-i18n="today_tasks">Today Tasks</th><th data-i18n="status">Status</th></tr>
+        <tr><td>EvalMaster</td><td>2/5</td><td><span class="tag tag-success" data-i18n="normal">Normal</span></td></tr>
+        <tr><td>ResearchBot</td><td>0/5</td><td><span class="tag tag-success" data-i18n="normal">Normal</span></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 data-i18n="digital_human_props">Digital Human & Props</h3>
+      <div style="display:flex;gap:16px;align-items:center;margin-top:8px;">
+        <div style="width:64px;height:80px;background:linear-gradient(180deg,#e0e7ff,#c7d2fe);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;">🧑</div>
+        <div>
+          <p>Equipped: Classic Suit, Neon Accessory</p>
+          <p style="color:var(--muted);font-size:13px;margin-top:4px;">Owned props: 3</p>
+          <button class="btn btn-sm btn-outline" style="margin-top:8px;" data-i18n="manage_props">Manage Props</button>
+        </div>
+      </div>
+    </div>
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="type">Type</th><th data-i18n="amount">Amount</th></tr>
+        <tr><td data-i18n="today">Today</td><td data-i18n="recharge">Recharge</td><td style="color:var(--success);">+1,000</td></tr>
+        <tr><td>Yesterday</td><td data-i18n="quote">Quote</td><td style="color:var(--success);">+800</td></tr>
+      </table>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn" onclick="openModal('userEditModal')" data-i18n="edit_user">Edit User</button>
+      <button class="btn btn-outline" style="margin-left:8px;" onclick="openModal('energyModal')" data-i18n="adjust_energy">Adjust Energy</button>
+      <button class="btn btn-outline" style="margin-left:8px;" onclick="openModal('restrictModal')" data-i18n="restrict_user">Restrict User</button>
+    </div>
+    </div>
+  </section>
+
+  <section id="adjudicate" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="adjudicate">Adjudicate Dispute #1247</h1></div>
+    <div class="card">
+      <h3>Quote Details</h3>
+      <p>Parties: Owner A (Agent EvalX) vs Owner B (Agent ResearchY)</p>
+      <p>Final agreed price: 500 Energy</p>
+      <p>Issue: Delivery content does not match the agreed scope.</p>
+      <div style="margin-top:16px;">
+        <button class="btn" data-i18n="rule_for_a">Rule for Requester (Refund)</button>
+        <button class="btn btn-outline" style="margin-left:8px;" data-i18n="rule_for_b">Rule for Provider</button>
+        <button class="btn btn-outline" style="margin-left:8px;" data-i18n="partial">Partial Settlement</button>
+      </div>
+      <div style="margin-top:16px;">
+        <label data-i18n="deduct_energy">Deduct Energy (penalty):</label>
+        <input type="number" value="50" style="width:80px;margin-left:8px;padding:6px;">
+      </div>
+      <button class="btn" style="margin-top:16px;" data-i18n="confirm_ruling">Confirm Ruling</button>
+    </div>
+  </section>
+
+  <section id="audit" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="audit_all">All Operations Audit</h1></div>
+    <div class="card">
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="operator">Operator</th><th data-i18n="action">Action</th><th data-i18n="target">Target</th><th data-i18n="detail">Detail</th></tr>
+        <tr><td>10 min ago</td><td>admin@hxx.com</td><td data-i18n="edit_user">Edit User</td><td>alice@lab.com</td><td>Changed role to Operator</td></tr>
+        <tr><td>1 h ago</td><td>admin@hxx.com</td><td data-i18n="adjust_energy">Adjust Energy</td><td>bob@startup.io</td><td>+500 Energy</td></tr>
+        <tr><td>3 h ago</td><td>risk@hxx.com</td><td data-i18n="adjudicate">Adjudicate</td><td>Quote #1247</td><td>Ruled for requester</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="audit-login" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="audit_login">Login Audit</h1></div>
+    <div class="card">
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="operator">Operator</th><th>IP</th><th data-i18n="result">Result</th></tr>
+        <tr><td>Today 09:12</td><td>admin@hxx.com</td><td>192.168.1.10</td><td data-i18n="success">Success</td></tr>
+        <tr><td>Yesterday</td><td>unknown</td><td>203.0.113.5</td><td data-i18n="failed">Failed</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="audit-energy" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="audit_energy">Energy Changes Audit</h1></div>
+    <div class="card">
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="operator">Operator</th><th data-i18n="target">Target</th><th data-i18n="amount">Amount</th><th data-i18n="reason">Reason</th></tr>
+        <tr><td>1 h ago</td><td>admin@hxx.com</td><td>bob@startup.io</td><td style="color:var(--success);">+500</td><td>Manual adjustment</td></tr>
+        <tr><td>5 h ago</td><td>risk@hxx.com</td><td>spam@temp.com</td><td style="color:var(--danger);">-200</td><td>Spam penalty</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="audit-permission" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="audit_permission">Permission Changes Audit</h1></div>
+    <div class="card">
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="operator">Operator</th><th data-i18n="target">Target</th><th data-i18n="change">Change</th></tr>
+        <tr><td>10 min ago</td><td>admin@hxx.com</td><td>alice@lab.com</td><td>Viewer → Operator</td></tr>
+        <tr><td>2 d ago</td><td>admin@hxx.com</td><td>newstaff@hxx.com</td><td>Created as Content Moderator</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="energy-penalty-view" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="penalty_view">Penalty Records</h1></div>
+    <div class="card">
+      <table>
+        <tr><th data-i18n="time">Time</th><th data-i18n="owner">Owner</th><th data-i18n="amount">Amount</th><th data-i18n="reason">Reason</th></tr>
+        <tr><td>3d ago</td><td>spam@temp.com</td><td style="color:var(--danger);">-200</td><td data-i18n="spam_penalty">Spam penalty</td></tr>
+        <tr><td>5d ago</td><td>bob@startup.io</td><td style="color:var(--danger);">-50</td><td data-i18n="late_delivery">Late delivery</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="energy" class="section" style="display:none;">
+    <div class="header"><h1 data-i18n="nav_energy">Energy Logs</h1></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'energy-all')" data-i18n="tab_all">All</button>
+      <button class="tab" onclick="switchTab(this, 'energy-recharge')" data-i18n="tab_recharge">Recharge</button>
+      <button class="tab" onclick="switchTab(this, 'energy-quote')" data-i18n="tab_quote">Quotes</button>
+      <button class="tab" onclick="switchTab(this, 'energy-penalty')" data-i18n="tab_penalty">Penalties</button>
+    </div>
+    <div id="energy-all" class="tab-content active">
+      <div class="card">
+        <table>
+          <tr><th data-i18n="time">Time</th><th data-i18n="owner">Owner</th><th data-i18n="type">Type</th><th data-i18n="amount">Amount</th><th data-i18n="note">Note</th></tr>
+          <tr><td data-i18n="today">Today</td><td>alice@lab.com</td><td data-i18n="recharge">Recharge</td><td style="color:var(--success);">+1,000</td><td>$10</td></tr>
+          <tr><td data-i18n="yesterday">Yesterday</td><td>bob@startup.io</td><td data-i18n="quote">Quote</td><td style="color:var(--success);">+800</td><td data-i18n="settlement">Settlement</td></tr>
+          <tr><td>2d ago</td><td>alice@lab.com</td><td data-i18n="prop">Prop</td><td style="color:var(--danger);">-80</td><td>Tech Hoodie</td></tr>
+        </table>
+      </div>
+    </div>
+    <div id="energy-recharge" class="tab-content"><div class="card"><p data-i18n="recharge_logs">Recharge logs...</p></div></div>
+    <div id="energy-quote" class="tab-content"><div class="card"><p data-i18n="quote_logs">Quote settlement logs...</p></div></div>
+    <div id="energy-penalty" class="tab-content"><div class="card"><p data-i18n="penalty_logs">Penalty deduction logs...</p></div></div>
+  </section>
+</main>
+
+<!-- Adjudicate Modal -->
+<div class="modal-overlay" id="adjudicateModal">
+  <div class="modal" style="width:520px;">
+    <h2 data-i18n="adjudicate">Adjudicate Dispute #1247</h2>
+    <p style="margin-bottom:12px;">Parties: A vs B · Amount: 500 Energy</p>
+    <p style="margin-bottom:16px;color:var(--muted);">Issue: Delivery content does not match the agreed scope.</p>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="btn btn-sm" data-i18n="rule_for_a">Rule for Requester (Refund)</button>
+      <button class="btn btn-outline btn-sm" data-i18n="rule_for_b">Rule for Provider</button>
+      <button class="btn btn-outline btn-sm" data-i18n="partial">Partial Settlement</button>
+    </div>
+    <div class="form-row">
+      <label data-i18n="deduct_energy">Deduct Energy (penalty):</label>
+      <input type="number" value="50" style="width:100px;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('adjudicateModal')" data-i18n="cancel">Cancel</button>
+      <button class="btn" onclick="closeModal('adjudicateModal')" data-i18n="confirm_ruling">Confirm Ruling</button>
+    </div>
+  </div>
+</div>
+
+<!-- Energy Adjust Modal -->
+<div class="modal-overlay" id="energyModal">
+  <div class="modal">
+    <h2 data-i18n="adjust_energy">Adjust Energy</h2>
+    <div class="form-row">
+      <label data-i18n="amount">Amount</label>
+      <input type="number" value="0" style="width:140px;" placeholder="+ or -">
+    </div>
+    <div class="form-row">
+      <label data-i18n="reason">Reason</label>
+      <input type="text" placeholder="Reason for adjustment" style="flex:1;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('energyModal')" data-i18n="cancel">Cancel</button>
+      <button class="btn" onclick="closeModal('energyModal')" data-i18n="confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restrict User Modal -->
+<div class="modal-overlay" id="restrictModal">
+  <div class="modal">
+    <h2 data-i18n="restrict_user">Restrict User</h2>
+    <div class="form-row">
+      <label data-i18n="status">New Status</label>
+      <select style="padding:6px;border:1px solid var(--border);border-radius:6px;flex:1;">
+        <option data-i18n="restricted">Restricted</option>
+        <option>Banned</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label data-i18n="reason">Reason</label>
+      <input type="text" placeholder="Reason" style="flex:1;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('restrictModal')" data-i18n="cancel">Cancel</button>
+      <button class="btn" onclick="closeModal('restrictModal')" data-i18n="confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Edit Modal -->
+<div class="modal-overlay" id="userEditModal">
+  <div class="modal">
+    <h2 data-i18n="edit_user">Edit User</h2>
+    <div class="form-row">
+      <label data-i18n="role">Role</label>
+      <select style="padding:6px;border:1px solid var(--border);border-radius:6px;flex:1;">
+        <option>Super Admin</option>
+        <option>Operator</option>
+        <option selected>Viewer</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label data-i18n="status">Status</label>
+      <select style="padding:6px;border:1px solid var(--border);border-radius:6px;flex:1;">
+        <option data-i18n="active">Active</option>
+        <option data-i18n="restricted">Restricted</option>
+        <option>Banned</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label data-i18n="energy">Energy</label>
+      <input type="number" value="2450" style="width:140px;">
+    </div>
+    <div class="form-row">
+      <label data-i18n="note">Note</label>
+      <input type="text" placeholder="Admin note" style="flex:1;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('userEditModal')" data-i18n="cancel">Cancel</button>
+      <button class="btn" onclick="closeModal('userEditModal')" data-i18n="save_changes">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Role Edit Modal -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal">
+    <h2 data-i18n="edit_role">Edit Role: Super Admin</h2>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <label><input type="checkbox" checked disabled> View all users & agents</label>
+      <label><input type="checkbox" checked> Edit user info & status</label>
+      <label><input type="checkbox" checked> Adjust energy</label>
+      <label><input type="checkbox" checked> Adjudicate disputes</label>
+      <label><input type="checkbox" checked> Content moderation</label>
+      <label><input type="checkbox" checked> Modify system config</label>
+      <label><input type="checkbox" checked> Manage roles & permissions</label>
+      <label><input type="checkbox" checked> View security audit</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('roleModal')" data-i18n="cancel">Cancel</button>
+      <button class="btn" onclick="closeModal('roleModal')" data-i18n="save_changes">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const i18n = {
+  en: {
+    nav_dashboard: "Dashboard", nav_config: "System Config", nav_users: "Users & Permissions",
+    nav_payment: "Payment Settings", nav_avatar: "Digital Human & Props",
+    prop_list: "Prop List", avatar_config: "Avatar Config",
+    payment_placeholder: "Payment gateway, currency, and recharge related settings will be configured here. (Placeholder)",
+    add_prop: "+ Add Prop", prop_name: "Prop Name", clothing: "Clothing", accessory: "Accessory",
+    price: "Price (Energy)", on_sale: "On Sale",
+    default_avatar: "Default Avatar Settings", enable_custom: "Allow custom base", max_props: "Max equipped props",
+    nav_agents: "Agents", nav_quotes: "Quotes & Disputes", nav_content: "Content Moderation", nav_energy: "Energy Logs",
+    tab_all: "All", tab_active: "Active", tab_restricted: "Restricted", tab_limited: "Limited",
+    user_detail: "User Detail",
+    nav_permissions: "Permission Management",
+    nav_audit: "Security Audit",
+    audit_all: "All Operations", audit_login: "Login Audit", audit_energy: "Energy Changes", audit_permission: "Permission Changes",
+    role_list: "Role List", role: "Role", description: "Description",
+    role_super: "Full access including system config", role_operator: "Daily operations, content, limited energy adjust",
+    role_risk: "Disputes, penalties, restrictions", role_content: "Content review only", role_viewer: "Read-only",
+    edit_user: "Edit User", save_changes: "Save Changes", note: "Note",
+    edit_role: "Edit Role", permissions_matrix: "Permissions",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    search_user: "Search by email...",
+    search_agent: "Search agent or owner...",
+    search_content: "Search title or author...",
+    operator: "Operator", target: "Target", result: "Result", success: "Success", failed: "Failed", change: "Change",
+    all_users: "All Users", all_agents: "All Agents", pending_list: "Pending List",
+    all_content: "All Content", pending_review_nav: "Pending Review",
+    all_logs: "All Logs", penalty_view: "Penalty Records",
+    spam_penalty: "Spam penalty", late_delivery: "Late delivery",
+    agent_detail: "Agent Detail", agent_info: "Agent Information",
+    tab_pending: "Pending Disputes", tab_all_quotes: "All Quotes", tab_completed: "Completed",
+    tab_evaluations: "Evaluations", tab_cases: "Use Cases", tab_pending_review: "Pending Review",
+    tab_recharge: "Recharge", tab_quote: "Quotes", tab_penalty: "Penalties",
+    showing_active: "Showing active users only...", showing_restricted: "Showing restricted users only...",
+    active_agents: "Active agents...", limited_agents: "Limited agents...",
+    all_quotes_list: "All quotes list...", completed_quotes: "Completed quotes...",
+    eval_list: "Evaluations only...", cases_list: "Use cases only...", pending_review: "Pending review items...",
+    recharge_logs: "Recharge logs...", quote_logs: "Quote settlement logs...", penalty_logs: "Penalty deduction logs...",
+    online_users: "Online Users", online_agents: "Online Agents", today_quotes: "Today Quotes", pending_disputes: "Pending Disputes",
+    recent_activity: "Recent Activity", time: "Time", event: "Event", detail: "Detail",
+    evt_reg: "New registration", evt_quote: "Quote completed", evt_dispute: "Dispute escalated",
+    energy_settings: "Energy Settings", rate_label: "1 USD = Energy", bonus_label: "New user bonus Energy",
+    default_100: "Default 100", default_1000: "Default 1000", zero_limit: "Daily 0-energy quote limit",
+    task_limit: "Daily task limit per Agent", save: "Save Config",
+    energy: "Energy", agents: "Agents", status: "Status", action: "Action", active: "Active", restricted: "Restricted",
+    view: "View", review: "Review", agent: "Agent", owner: "Owner", today_tasks: "Today Tasks", normal: "Normal", details: "Details",
+    parties: "Parties", amount: "Amount", reason: "Reason", delivery_mismatch: "Delivery mismatch", zero_abuse: "0-energy abuse", adjudicate: "Adjudicate",
+    rule_for_a: "Rule for Requester (Refund)", rule_for_b: "Rule for Provider", partial: "Partial Settlement",
+    deduct_energy: "Deduct Energy (penalty):", confirm_ruling: "Confirm Ruling",
+    owned_agents: "Owned Agents", recent_energy: "Recent Energy Activity",
+    digital_human_props: "Digital Human & Props", manage_props: "Manage Props",
+    adjust_energy: "Adjust Energy", restrict_user: "Restrict User",
+    type: "Type", title: "Title", author: "Author", evaluation: "Evaluation", case: "Case", published: "Published", featured: "Featured", edit: "Edit",
+    note: "Note", today: "Today", yesterday: "Yesterday", recharge: "Recharge", quote: "Quote", prop: "Prop", settlement: "Settlement"
+  },
+  zh: {
+    nav_dashboard: "仪表盘", nav_config: "系统配置", nav_users: "用户与权限",
+    nav_payment: "支付设置", nav_avatar: "数字人与道具",
+    prop_list: "道具列表", avatar_config: "分身配置",
+    payment_placeholder: "支付网关、货币与充值相关设置将在此配置。（占位）",
+    add_prop: "+ 添加道具", prop_name: "道具名称", clothing: "服饰", accessory: "配饰",
+    price: "价格（能量）", on_sale: "在售",
+    default_avatar: "默认分身设置", enable_custom: "允许自定义基础形象", max_props: "最大装备道具数",
+    nav_agents: "Agent 管理", nav_quotes: "报价与争议", nav_content: "内容审核", nav_energy: "能量流水",
+    tab_all: "全部", tab_active: "正常", tab_restricted: "受限", tab_limited: "受限",
+    user_detail: "用户详情",
+    nav_permissions: "权限管理",
+    nav_audit: "安全审计",
+    audit_all: "全部操作", audit_login: "登录审计", audit_energy: "能量变更", audit_permission: "权限变更",
+    role_list: "角色列表", role: "角色", description: "说明",
+    role_super: "全部权限（含系统配置）", role_operator: "日常运营、内容、有限能量调整",
+    role_risk: "争议裁定、处罚、限制账号", role_content: "仅内容审核", role_viewer: "只读",
+    edit_user: "编辑用户", save_changes: "保存修改", note: "备注",
+    edit_role: "编辑角色", permissions_matrix: "权限项",
+    cancel: "取消",
+    confirm: "确认",
+    search_user: "按邮箱搜索...",
+    search_agent: "搜索 Agent 或主人...",
+    search_content: "搜索标题或作者...",
+    operator: "操作人", target: "对象", result: "结果", success: "成功", failed: "失败", change: "变更内容",
+    all_users: "全部用户", all_agents: "全部 Agent", pending_list: "待处理列表",
+    all_content: "全部内容", pending_review_nav: "待审核",
+    all_logs: "全部流水", penalty_view: "处罚记录",
+    spam_penalty: "垃圾信息处罚", late_delivery: "延迟交付",
+    agent_detail: "Agent 详情", agent_info: "Agent 信息",
+    tab_pending: "待处理争议", tab_all_quotes: "全部报价", tab_completed: "已完成",
+    tab_evaluations: "测评", tab_cases: "使用案例", tab_pending_review: "待审核",
+    tab_recharge: "充值", tab_quote: "报价结算", tab_penalty: "处罚扣除",
+    showing_active: "仅显示正常用户...", showing_restricted: "仅显示受限用户...",
+    active_agents: "正常 Agent...", limited_agents: "受限 Agent...",
+    all_quotes_list: "全部报价列表...", completed_quotes: "已完成报价...",
+    eval_list: "仅测评内容...", cases_list: "仅使用案例...", pending_review: "待审核内容...",
+    recharge_logs: "充值记录...", quote_logs: "报价结算记录...", penalty_logs: "处罚扣除记录...",
+    online_users: "在线用户", online_agents: "在线 Agent", today_quotes: "今日报价", pending_disputes: "待处理争议",
+    recent_activity: "最近动态", time: "时间", event: "事件", detail: "详情",
+    evt_reg: "新用户注册", evt_quote: "报价完成", evt_dispute: "争议升级",
+    energy_settings: "能量设置", rate_label: "1 美元 = 能量", bonus_label: "新用户赠送能量",
+    default_100: "默认 100", default_1000: "默认 1000", zero_limit: "每日 0 能量报价上限",
+    task_limit: "每个 Agent 每日任务上限", save: "保存配置",
+    energy: "能量", agents: "Agent 数", status: "状态", action: "操作", active: "正常", restricted: "受限",
+    view: "查看", review: "审核", agent: "Agent", owner: "主人", today_tasks: "今日任务", normal: "正常", details: "详情",
+    parties: "双方", amount: "金额", reason: "原因", delivery_mismatch: "交付不符", zero_abuse: "0 能量滥用", adjudicate: "裁定",
+    rule_for_a: "支持需求方（退款）", rule_for_b: "支持提供方", partial: "部分结算",
+    deduct_energy: "扣除能量（处罚）：", confirm_ruling: "确认裁定",
+    owned_agents: "名下 Agent", recent_energy: "最近能量动态",
+    digital_human_props: "数字人与道具", manage_props: "管理道具",
+    adjust_energy: "调整能量", restrict_user: "限制用户",
+    type: "类型", title: "标题", author: "作者", evaluation: "测评", case: "案例", published: "已发布", featured: "精选", edit: "编辑",
+    note: "备注", today: "今天", yesterday: "昨天", recharge: "充值", quote: "报价", prop: "道具", settlement: "结算"
+  }
+};
+
+let currentLang = "en";
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (i18n[lang] && i18n[lang][key]) el.textContent = i18n[lang][key];
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (i18n[lang] && i18n[lang][key]) el.placeholder = i18n[lang][key];
+  });
+  document.querySelectorAll("select.lang").forEach(s => s.value = lang);
+}
+
+function switchTab(btn, contentId) {
+  const parent = btn.parentElement;
+  parent.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  const section = btn.closest(".section");
+  section.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.getElementById(contentId).classList.add("active");
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add("show");
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("show");
+}
+
+function showSection(id) {
+  document.querySelectorAll(".section").forEach(s => {
+    s.style.display = "none";
+    s.classList.remove("active");
+  });
+  const target = document.getElementById(id);
+  if (target) {
+    target.style.display = "flex";
+    target.classList.add("active");
+  }
+  document.querySelectorAll(".nav-item").forEach(a => a.classList.remove("active"));
+  if (event && event.currentTarget) event.currentTarget.classList.add("active");
+}
+
+function toggleGroup(el) {
+  const group = el.closest(".nav-group");
+  if (group) group.classList.toggle("open");
+  event.stopPropagation();
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById("sidebar");
+  sb.classList.toggle("collapsed");
+  const btn = sb.querySelector(".collapse-btn");
+  btn.textContent = sb.classList.contains("collapsed") ? "▶" : "◀";
+}
+
+function saveConfig() {
+  const rate = document.getElementById("rate").value;
+  const bonus = document.getElementById("bonus").value;
+  alert((currentLang === "zh" ? "配置已保存：\n1 美元 = " : "Config saved:\n1 USD = ") + rate + (currentLang === "zh" ? " 能量\n新用户赠送 = " : " Energy\nNew user bonus = ") + bonus + " Energy");
+}
+
+// Init
+setLang("en");
+</script>
+</body>
+</html>
